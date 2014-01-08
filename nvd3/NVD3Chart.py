@@ -74,7 +74,7 @@ class NVD3Chart:
         * ``show_controls`` - False / True
         * ``assets_directory`` directory holding the assets (./bower_components/)
         * ``append_extra_js`` - False / True
-        # ``extra_js_string`` - Custom actions string to append to js
+        * ``extra_js_string`` - Custom actions string to append to js
     """
     count = 0
     dateformat = '%x'
@@ -465,6 +465,7 @@ class NVD3Chart:
         if self.jquery_on_ready:
             self.jschart += "\n});"
 
+        # to append extra JS-actions
         if self.append_extra_js:
             self.jschart += "\n"
             self.jschart += self.extra_js_string
