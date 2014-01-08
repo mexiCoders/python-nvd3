@@ -73,6 +73,8 @@ class NVD3Chart:
         * ``show_labels`` - False / True
         * ``show_controls`` - False / True
         * ``assets_directory`` directory holding the assets (./bower_components/)
+        * ``append_extra_js`` - False / True
+        # ``extra_js_string`` - Custom actions string to append to js
     """
     count = 0
     dateformat = '%x'
@@ -105,6 +107,8 @@ class NVD3Chart:
     show_labels = True
     show_controls = True 
     assets_directory = './bower_components/'
+    append_extra_js = False 
+    extra_js_string = ''
 
     def __init__(self, **kwargs):
         """
@@ -130,6 +134,8 @@ class NVD3Chart:
         self.show_controls = kwargs.get('show_controls', True)
         self.tag_script_js = kwargs.get('tag_script_js', True)
         self.assets_directory = kwargs.get('assets_directory', './bower_components/')
+        self.append_extra_js = kwargs.get('append_extra_js', False)
+        self.extra_js_string = kwargs.get('extra_js_string', '')
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -458,6 +464,11 @@ class NVD3Chart:
 
         if self.jquery_on_ready:
             self.jschart += "\n});"
+
+        if self.append_extra_js:
+            self.jschart += "\n"
+            self.jschart += self.extra_js_string
+            self.jschart += "\n"
 
         #Include data
         series_js = json.dumps(self.series)
