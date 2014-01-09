@@ -458,6 +458,12 @@ class NVD3Chart:
             stab(3) + self.d3_select_extra + \
             stab(3) + ".call(chart);\n\n"
 
+        # to append extra JS-actions
+        if self.append_extra_js:
+            self.jschart += "\n"
+            self.jschart += self.extra_js_string
+            self.jschart += "\n"
+
         if self.resize:
             self.jschart += stab(1) + "nv.utils.windowResize(chart.update);\n"
         self.jschart += stab(1) + "return chart;\n});"
@@ -465,11 +471,6 @@ class NVD3Chart:
         if self.jquery_on_ready:
             self.jschart += "\n});"
 
-        # to append extra JS-actions
-        if self.append_extra_js:
-            self.jschart += "\n"
-            self.jschart += self.extra_js_string
-            self.jschart += "\n"
 
         #Include data
         series_js = json.dumps(self.series)
