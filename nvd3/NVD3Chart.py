@@ -73,6 +73,7 @@ class NVD3Chart:
         * ``show_labels`` - False / True
         * ``show_controls`` - False / True
         * ``assets_directory`` directory holding the assets (./bower_components/)
+        * ``margin`` - Dictionary that containts chart margin
     """
     count = 0
     dateformat = '%x'
@@ -105,6 +106,7 @@ class NVD3Chart:
     show_labels = True
     show_controls = True 
     assets_directory = './bower_components/'
+    margin = None
 
     def __init__(self, **kwargs):
         """
@@ -130,6 +132,7 @@ class NVD3Chart:
         self.show_controls = kwargs.get('show_controls', True)
         self.tag_script_js = kwargs.get('tag_script_js', True)
         self.assets_directory = kwargs.get('assets_directory', './bower_components/')
+        self.margin = kwargs.get('margin', None)
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -386,6 +389,11 @@ class NVD3Chart:
 
         if self.stacked:
             self.jschart += stab(2) + "chart.stacked(true);"
+
+        if self.margin:
+            json_margin = json.dumps(self.margin).replace('"', '')
+            self.jschart += stab(2) + "chart.margin({dic});\n\n".format(dic=(json_margin))
+
 
         """
         We want now to loop through all the defined Axis and add:
