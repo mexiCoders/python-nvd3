@@ -73,8 +73,10 @@ class NVD3Chart:
         * ``show_labels`` - False / True
         * ``show_controls`` - False / True
         * ``assets_directory`` directory holding the assets (./bower_components/)
+        * ``prepend_extra_js`` - False / True
+        * ``prepend_extra_js_string`` - Custom actions string to prepend to js
         * ``append_extra_js`` - False / True
-        * ``extra_js_string`` - Custom actions string to append to js
+        * ``append_extra_js_string`` - Custom actions string to append to js
     """
     count = 0
     dateformat = '%x'
@@ -107,8 +109,10 @@ class NVD3Chart:
     show_labels = True
     show_controls = True 
     assets_directory = './bower_components/'
+    prepend_extra_js = False 
+    prepend_extra_js_string = ''
     append_extra_js = False 
-    extra_js_string = ''
+    append_extra_js_string = ''
 
     def __init__(self, **kwargs):
         """
@@ -134,8 +138,10 @@ class NVD3Chart:
         self.show_controls = kwargs.get('show_controls', True)
         self.tag_script_js = kwargs.get('tag_script_js', True)
         self.assets_directory = kwargs.get('assets_directory', './bower_components/')
+        self.prepend_extra_js = kwargs.get('prepend_extra_js', False)
+        self.prepend_extra_js_string = kwargs.get('prepend_extra_js_string', '')
         self.append_extra_js = kwargs.get('append_extra_js', False)
-        self.extra_js_string = kwargs.get('extra_js_string', '')
+        self.append_extra_js_string = kwargs.get('append_extra_js_string', '')
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -451,6 +457,12 @@ class NVD3Chart:
             else:
                 self.jschart += stab(2) + "chart.showLabels(false);\n"
 
+        # to prepend extra JS-actions
+        if self.prepend_extra_js:
+            self.jschart += "\n"
+            self.jschart += self.prepend_extra_js_string
+            self.jschart += "\n"
+
         #Inject data to D3
         self.jschart += stab(2) + "d3.select('#%s svg')\n" % self.name + \
             stab(3) + ".datum(%s)\n" % datum + \
@@ -461,7 +473,7 @@ class NVD3Chart:
         # to append extra JS-actions
         if self.append_extra_js:
             self.jschart += "\n"
-            self.jschart += self.extra_js_string
+            self.jschart += self.append_extra_js_string
             self.jschart += "\n"
 
         if self.resize:
