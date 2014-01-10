@@ -73,6 +73,7 @@ class NVD3Chart:
         * ``show_labels`` - False / True
         * ``show_controls`` - False / True
         * ``assets_directory`` directory holding the assets (./bower_components/)
+        * ``redirect_links`` List with the links that are going to be called when clicking some chart point
     """
     count = 0
     dateformat = '%x'
@@ -105,6 +106,7 @@ class NVD3Chart:
     show_labels = True
     show_controls = True 
     assets_directory = './bower_components/'
+    redirect_links = None
 
     def __init__(self, **kwargs):
         """
@@ -130,6 +132,8 @@ class NVD3Chart:
         self.show_controls = kwargs.get('show_controls', True)
         self.tag_script_js = kwargs.get('tag_script_js', True)
         self.assets_directory = kwargs.get('assets_directory', './bower_components/')
+        self.redirect_links = kwargs.get('redirect_links', None)
+
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -444,6 +448,15 @@ class NVD3Chart:
                 self.jschart += stab(2) + "chart.showLabels(true);\n"
             else:
                 self.jschart += stab(2) + "chart.showLabels(false);\n"
+
+        if self.redirect_links:
+            self.jschart += 'var redirect_links = ' + str(self.redirect_links) + ';' 
+            self.jschart += "$(document).on('click', '#{chart_name} svg', function(e) ".format(chart_name=self.name) + \
+                """{  
+                    var point = e.target.__data__.point;
+                    window.location = redirect_links[point];
+                });
+                """
 
         #Inject data to D3
         self.jschart += stab(2) + "d3.select('#%s svg')\n" % self.name + \
