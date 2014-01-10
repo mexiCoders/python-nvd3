@@ -73,6 +73,7 @@ class NVD3Chart:
         * ``show_labels`` - False / True
         * ``show_controls`` - False / True
         * ``assets_directory`` directory holding the assets (./bower_components/)
+        * ``python_defined_tooltip`` Dictionary with x value as key and a string as the value to be displayed.
     """
     count = 0
     dateformat = '%x'
@@ -105,6 +106,7 @@ class NVD3Chart:
     show_labels = True
     show_controls = True 
     assets_directory = './bower_components/'
+    python_defined_tooltip = None
 
     def __init__(self, **kwargs):
         """
@@ -130,6 +132,7 @@ class NVD3Chart:
         self.show_controls = kwargs.get('show_controls', True)
         self.tag_script_js = kwargs.get('tag_script_js', True)
         self.assets_directory = kwargs.get('assets_directory', './bower_components/')
+        self.python_defined_tooltip = kwargs.get('python_defined_tooltip', None)
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -337,6 +340,19 @@ class NVD3Chart:
 
     def build_custom_tooltip(self):
         """generate custom tooltip for the chart"""
+        if self.python_defined_tooltip:
+            json_tooltip_dict = json.dumps(self.python_defined_tooltip)
+            self.charttooltip = stab(2) + "chart.tooltipContent(function(key, y, e, graph) {\n" + \
+                stab(3) + "var x = String(graph.point.x);\n" +\
+                stab(3) + "var y = String(graph.point.y);\n" +\
+                stab(3) + "var tooltip_dict = " + json_tooltip_dict + ";\n" +\
+                self.tooltip_condition_string +\
+                stab(3) + "tooltip_str = '<center><b>'+ tooltip_dict[x]+'</b></center>';\n" +\
+                stab(3) + "return tooltip_str;\n" + \
+                stab(2) + "});\n"
+
+            return
+
         if self.custom_tooltip_flag:
             if not self.date_flag:
                 if self.model == 'pieChart':
