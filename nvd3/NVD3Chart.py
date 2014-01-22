@@ -491,21 +491,27 @@ class NVD3Chart:
             self.jschart += self.prepend_extra_js_string
             self.jschart += "\n"
 
-        if self.redirect_links:
-            self.jschart += 'var redirect_links = ' + str(self.redirect_links) + ';' 
-            self.jschart += "$(document).on('click', '#{chart_name} svg', function(e) ".format(chart_name=self.name) + \
-                """{  
-                    var point = e.target.__data__.point;
-                    window.location = redirect_links[point];
-                });
-                """
-
         #Inject data to D3
         self.jschart += stab(2) + "d3.select('#%s svg')\n" % self.name + \
             stab(3) + ".datum(%s)\n" % datum + \
             stab(3) + ".transition().duration(500)\n" + \
             stab(3) + self.d3_select_extra + \
             stab(3) + ".call(chart);\n\n"
+
+        if self.redirect_links:
+            self.jschart += 'var redirect_links = ' + str(self.redirect_links) + ';\n'
+            if self.model == 'multiBarChart': 
+                self.jschart += """d3.selectAll('.nv-bar').on('click', function (d, i) {
+                    window.location = redirect_links[i];
+                });
+                """
+            else:
+                self.jschart += "$(document).on('click', '#{chart_name} svg', function(e) ".format(chart_name=self.name) + \
+                    """{
+                        var point = e.target.__data__.point;
+                        window.location = redirect_links[point];
+                    });
+                    """
 
         # to append extra JS-actions
         if self.append_extra_js:
