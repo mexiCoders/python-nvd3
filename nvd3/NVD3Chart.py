@@ -79,6 +79,7 @@ class NVD3Chart:
         * ``append_extra_js_string`` - Custom actions string to append to js
         * ``redirect_links`` List with the links that are going to be called when clicking some chart point
         * ``python_defined_tooltip`` Dictionary with x value as key and a string as the value to be displayed
+        * ``margin`` - Dictionary that containts chart margin
     """
     count = 0
     dateformat = '%x'
@@ -117,6 +118,7 @@ class NVD3Chart:
     append_extra_js_string = ''
     redirect_links = None
     python_defined_tooltip = None
+    margin = None
 
     def __init__(self, **kwargs):
         """
@@ -148,6 +150,7 @@ class NVD3Chart:
         self.append_extra_js_string = kwargs.get('append_extra_js_string', '')
         self.redirect_links = kwargs.get('redirect_links', None)
         self.python_defined_tooltip = kwargs.get('python_defined_tooltip', None)
+        self.margin = kwargs.get('margin', None)
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -418,6 +421,10 @@ class NVD3Chart:
 
         if self.stacked:
             self.jschart += stab(2) + "chart.stacked(true);"
+
+        if self.margin:
+            json_margin = json.dumps(self.margin).replace('"', '')
+            self.jschart += stab(2) + "chart.margin({dic});\n\n".format(dic=(json_margin))
 
         """
         We want now to loop through all the defined Axis and add:
