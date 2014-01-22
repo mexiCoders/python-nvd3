@@ -77,6 +77,7 @@ class NVD3Chart:
         * ``prepend_extra_js_string`` - Custom actions string to prepend to js
         * ``append_extra_js`` - False / True
         * ``append_extra_js_string`` - Custom actions string to append to js
+        * ``redirect_links`` List with the links that are going to be called when clicking some chart point
     """
     count = 0
     dateformat = '%x'
@@ -113,6 +114,7 @@ class NVD3Chart:
     prepend_extra_js_string = ''
     append_extra_js = False 
     append_extra_js_string = ''
+    redirect_links = None
 
     def __init__(self, **kwargs):
         """
@@ -142,6 +144,7 @@ class NVD3Chart:
         self.prepend_extra_js_string = kwargs.get('prepend_extra_js_string', '')
         self.append_extra_js = kwargs.get('append_extra_js', False)
         self.append_extra_js_string = kwargs.get('append_extra_js_string', '')
+        self.redirect_links = kwargs.get('redirect_links', None)
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -463,6 +466,15 @@ class NVD3Chart:
             self.jschart += "\n"
             self.jschart += self.prepend_extra_js_string
             self.jschart += "\n"
+
+        if self.redirect_links:
+            self.jschart += 'var redirect_links = ' + str(self.redirect_links) + ';' 
+            self.jschart += "$(document).on('click', '#{chart_name} svg', function(e) ".format(chart_name=self.name) + \
+                """{  
+                    var point = e.target.__data__.point;
+                    window.location = redirect_links[point];
+                });
+                """
 
         #Inject data to D3
         self.jschart += stab(2) + "d3.select('#%s svg')\n" % self.name + \
