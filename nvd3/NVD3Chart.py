@@ -78,6 +78,7 @@ class NVD3Chart:
         * ``append_extra_js`` - False / True
         * ``append_extra_js_string`` - Custom actions string to append to js
         * ``redirect_links`` List with the links that are going to be called when clicking some chart point
+        * ``python_defined_tooltip`` Dictionary with x value as key and a string as the value to be displayed
     """
     count = 0
     dateformat = '%x'
@@ -115,6 +116,7 @@ class NVD3Chart:
     append_extra_js = False 
     append_extra_js_string = ''
     redirect_links = None
+    python_defined_tooltip = None
 
     def __init__(self, **kwargs):
         """
@@ -145,6 +147,7 @@ class NVD3Chart:
         self.append_extra_js = kwargs.get('append_extra_js', False)
         self.append_extra_js_string = kwargs.get('append_extra_js_string', '')
         self.redirect_links = kwargs.get('redirect_links', None)
+        self.python_defined_tooltip = kwargs.get('python_defined_tooltip', None)
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -352,6 +355,20 @@ class NVD3Chart:
 
     def build_custom_tooltip(self):
         """generate custom tooltip for the chart"""
+
+        if self.python_defined_tooltip:
+            json_tooltip_dict = json.dumps(self.python_defined_tooltip)
+            self.charttooltip = stab(2) + "chart.tooltipContent(function(key, y, e, graph) {\n" + \
+                stab(3) + "var x = String(graph.point.x);\n" + \
+                stab(3) + "var y = String(graph.point.y);\n" + \
+                stab(3) + "var tooltip_dict = " + json_tooltip_dict + ";\n" + \
+                self.tooltip_condition_string + \
+                stab(3) + "tooltip_str = '<center><b>'+ tooltip_dict[x]+'</b></center>';\n" + \
+                stab(3) + "return tooltip_str;\n" + \
+                stab(2) + "});\n"
+
+            return
+
         if self.custom_tooltip_flag:
             if not self.date_flag:
                 if self.model == 'pieChart':
