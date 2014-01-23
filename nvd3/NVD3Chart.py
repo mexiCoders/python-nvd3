@@ -361,18 +361,35 @@ class NVD3Chart:
 
         if self.python_defined_tooltip:
             new_dict = {}
+            key_is_a_tuple = False
             for k, v in self.python_defined_tooltip.items():
-                if k == float(int(k)):
-                    new_dict[int(k)] = v
+                if type(k) == type((1,2)):
+                    key_is_a_tuple = True
+                    x, y = k
+                    if x == float(long(x)):
+                        x = long(x)
+                    if y == float(long(y)):
+                        y = long(y)
+                    new_dict[str(x) + '|' + str(y)] = v
                 else:
-                    new_dict[k] = v
+                    if k == float(long(k)):
+                        new_dict[long(k)] = v
+                    else:
+                        new_dict[k] = v
             json_tooltip_dict = json.dumps(new_dict)
+
+            if key_is_a_tuple:
+                js_key_is_a_tuple = stab(3) + 'var tooltip_key = x + "|" + y;\n'
+            else:
+                js_key_is_a_tuple = stab(3) + 'var tooltip_key = x;\n'
+
             self.charttooltip = stab(2) + "chart.tooltipContent(function(key, y, e, graph) {\n" + \
                 stab(3) + "var x = String(graph.point.x);\n" + \
                 stab(3) + "var y = String(graph.point.y);\n" + \
                 stab(3) + "var tooltip_dict = " + json_tooltip_dict + ";\n" + \
                 self.tooltip_condition_string + \
-                stab(3) + "tooltip_str = '<center><b>'+ tooltip_dict[x]+'</b></center>';\n" + \
+                js_key_is_a_tuple + \
+                stab(3) + "tooltip_str = '<center><b>'+ tooltip_dict[tooltip_key]+'</b></center>';\n" + \
                 stab(3) + "return tooltip_str;\n" + \
                 stab(2) + "});\n"
 
