@@ -360,7 +360,13 @@ class NVD3Chart:
         """generate custom tooltip for the chart"""
 
         if self.python_defined_tooltip:
-            json_tooltip_dict = json.dumps(self.python_defined_tooltip)
+            new_dict = {}
+            for k, v in self.python_defined_tooltip.items():
+                if k == float(int(k)):
+                    new_dict[int(k)] = v
+                else:
+                    new_dict[k] = v
+            json_tooltip_dict = json.dumps(new_dict)
             self.charttooltip = stab(2) + "chart.tooltipContent(function(key, y, e, graph) {\n" + \
                 stab(3) + "var x = String(graph.point.x);\n" + \
                 stab(3) + "var y = String(graph.point.y);\n" + \
