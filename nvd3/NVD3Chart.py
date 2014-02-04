@@ -78,7 +78,7 @@ class NVD3Chart:
         * ``append_extra_js`` - False / True
         * ``append_extra_js_string`` - Custom actions string to append to js
         * ``redirect_links`` List with the links that are going to be called when clicking some chart point
-        * ``python_defined_tooltip`` List with the tooltips that are going to be displayed
+        * ``python_defined_tooltip`` Dictionary with lists of tooltips that are going to be displayed. Each list is a serie
         * ``margin`` - Dictionary that containts chart margin
     """
     count = 0
@@ -202,18 +202,20 @@ class NVD3Chart:
         if 'shape' in kwargs or 'size' in kwargs:
             csize = kwargs.get('size', 1)
             cshape = kwargs.get('shape', 'circle')
-
+            
             serie = [{
                 'x': x[i],
                 'y': y,
                 'shape': cshape,
                 'size': csize[i] if isinstance(csize, list) else csize
-            } for i, y in enumerate(y)]
+            } for i, y in enumerate(y) if y is not None]
         else:
             if self.model == 'pieChart':
                 serie = [{'label': x[i], 'value': y} for i, y in enumerate(y)]
             elif self.model == 'linePlusBarWithFocusChart':
                 serie = [[x[i], y] for i, y in enumerate(y)]
+            elif self.model == 'scatterChart':
+                serie = [{'x': x[i], 'y': y} for i, y in enumerate(y) if y is not None]
             else:
                 serie = [{'x': x[i], 'y': y} for i, y in enumerate(y)]
 
@@ -360,12 +362,14 @@ class NVD3Chart:
         """generate custom tooltip for the chart"""
 
         if self.python_defined_tooltip:
-            json_tooltip_list = json.dumps(self.python_defined_tooltip)
+            json_tooltips = json.dumps(self.python_defined_tooltip)
 
             self.charttooltip = stab(2) + "chart.tooltipContent(function(key, y, e, graph) {\n" + \
                 stab(3) + "var x = String(graph.point.x);\n" + \
                 stab(3) + "var y = String(graph.point.y);\n" + \
-                stab(3) + "var tooltip_list = " + json_tooltip_list + ";\n" + \
+                stab(3) + "var serie = String(graph.point.series);\n" + \
+                stab(3) + "var tooltips = " + json_tooltips + ";\n" + \
+                stab(3) + "var tooltip_list = tooltips[serie];\n" + \
                 self.tooltip_condition_string + \
                 stab(3) + "tooltip_str = '<center><b>'+ tooltip_list[graph.pointIndex]+'</b></center>';\n" + \
                 stab(3) + "return tooltip_str;\n" + \
@@ -503,14 +507,21 @@ class NVD3Chart:
             self.jschart += 'var redirect_links = ' + str(self.redirect_links) + ';\n'
             if self.model == 'multiBarChart': 
                 self.jschart += """d3.selectAll('.nv-bar').on('click', function (d, i) {
-                    window.location = redirect_links[i];
+                    serie = d.series;
+                    index = i - (redirect_links[serie].length * serie);
+                    window.location = redirect_links[serie][index];
                 });
                 """
             else:
                 self.jschart += "$(document).on('click', '#{chart_name} svg', function(e) ".format(chart_name=self.name) + \
                     """{
-                        var point = e.target.__data__.point;
-                        window.location = redirect_links[point];
+                        if ('point' in e.target.__data__) {
+                            var point = e.target.__data__.point;
+                            var serie = e.target.__data__.series;
+                            if (redirect_links[serie][point]) {
+                                window.location = redirect_links[serie][point];
+                            }
+                        }
                     });
                     """
 
