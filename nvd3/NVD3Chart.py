@@ -367,7 +367,7 @@ class NVD3Chart:
             self.charttooltip = stab(2) + "chart.tooltipContent(function(key, y, e, graph) {\n" + \
                 stab(3) + "var x = String(graph.point.x);\n" + \
                 stab(3) + "var y = String(graph.point.y);\n" + \
-                stab(3) + "var serie = String(graph.point.series);\n" + \
+                stab(3) + "var serie = key;\n" + \
                 stab(3) + "var tooltips = " + json_tooltips + ";\n" + \
                 stab(3) + "var tooltip_list = tooltips[serie];\n" + \
                 self.tooltip_condition_string + \
@@ -504,20 +504,36 @@ class NVD3Chart:
             stab(3) + ".call(chart);\n\n"
 
         if self.redirect_links:
-            self.jschart += 'var redirect_links = ' + str(self.redirect_links) + ';\n'
+            self.jschart += 'var redirect_links = ' + json.dumps(self.redirect_links) + ';\n'
             if self.model == 'multiBarChart': 
-                self.jschart += """d3.selectAll('.nv-bar').on('click', function (d, i) {
-                    serie = d.series;
-                    index = i - (redirect_links[serie].length * serie);
+                self.jschart += """chart.multibar.dispatch.on("elementClick", function(e) {
+                    var serie = e.series.key;
+                    var index = e.pointIndex;
                     window.location = redirect_links[serie][index];
                 });
                 """
             else:
+                js_data = 'data_{name}'.format(name=self.name)
                 self.jschart += "$(document).on('click', '#{chart_name} svg', function(e) ".format(chart_name=self.name) + \
                     """{
                         if ('point' in e.target.__data__) {
+                            var p = e.target.__data__.data.point;
+                            var last = p[p.length-1];
+                            var x = last.x;
+                            var y = last.y;
                             var point = e.target.__data__.point;
                             var serie = e.target.__data__.series;
+                            for (i=0; i < """ + js_data + """.length; i++) {
+                                var s = """ + js_data + """[i];
+                                if (point < s.values.length) {
+                                    sx = s.values[point].x;
+                                    sy = s.values[point].y;
+                                    if (x == sx && y == sy) {
+                                        var serie = i;
+                                        break;
+                                    }
+                                }
+                            } 
                             if (redirect_links[serie][point]) {
                                 window.location = redirect_links[serie][point];
                             }
