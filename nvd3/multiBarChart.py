@@ -79,13 +79,14 @@ class multiBarChart(NVD3Chart):
 
         if kwargs.get('x_is_date', False):
             self.set_date_flag(True)
-            self.create_x_axis('xAxis',
+            self.create_x_axis('xAxis', 
+                               label=kwargs.get('x_axis_label', None),
                                format=kwargs.get('x_axis_format', '%d %b %Y'),
                                date=True)
             self.set_custom_tooltip_flag(True)
         else:
-            self.create_x_axis('xAxis', format=kwargs.get('x_axis_format', '.2f'))
-        self.create_y_axis('yAxis', format=kwargs.get('y_axis_format', '.2f'))
+            self.create_x_axis('xAxis', label=kwargs.get('x_axis_label', None), format=kwargs.get('x_axis_format', '.2f'))
+        self.create_y_axis('yAxis', label=kwargs.get('y_axis_label', None), format=kwargs.get('y_axis_format', '.2f'))
         # must have a specified height, otherwise it superimposes both chars
         if height:
             self.set_graph_height(height)
