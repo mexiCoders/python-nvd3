@@ -88,7 +88,8 @@ class lineChart(NVD3Chart):
                 self.x_axis_format = format = 'AM_PM'
             else:
                 format = kwargs.get('x_axis_format', 'r')
-            self.create_x_axis('xAxis', format=format)
+            custom_format = kwargs.get('custom_format', False)
+            self.create_x_axis('xAxis', format=format, custom_format=custom_format)
         self.create_y_axis('yAxis', format=kwargs.get('y_axis_format', '.02f'))
 
         # must have a specified height, otherwise it superimposes both chars
