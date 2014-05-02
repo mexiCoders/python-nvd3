@@ -557,8 +557,8 @@ class NVD3Chart:
         if self.zoom:
             if self.model == 'scatterChart':
                 self.jschart += "\n"
-                self.jschart += "\nvar width = $('#compare').width();"
-                self.jschart += "\nvar height = $('#compare').height();"
+                self.jschart += "\nvar width = $('#{name}').width();".format(name=self.name)
+                self.jschart += "\nvar height = $('#{name}').height();".format(name=self.name)
                 self.jschart += "\nxmin = 99999999999;"
                 self.jschart += "\nymin = 99999999999;"
                 self.jschart += "\nymax = 0;"
