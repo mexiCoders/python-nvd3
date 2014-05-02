@@ -80,6 +80,7 @@ class NVD3Chart:
         * ``redirect_links`` List with the links that are going to be called when clicking some chart point
         * ``python_defined_tooltip`` Dictionary with lists of tooltips that are going to be displayed. Each list is a serie
         * ``margin`` - Dictionary that containts chart margin
+        * ``zoom`` - Allow to zoom in (scatterChart)
     """
     count = 0
     dateformat = '%x'
@@ -119,6 +120,7 @@ class NVD3Chart:
     redirect_links = None
     python_defined_tooltip = None
     margin = None
+    zoom = False
 
     def __init__(self, **kwargs):
         """
@@ -151,6 +153,7 @@ class NVD3Chart:
         self.redirect_links = kwargs.get('redirect_links', None)
         self.python_defined_tooltip = kwargs.get('python_defined_tooltip', None)
         self.margin = kwargs.get('margin', None)
+        self.zoom = kwargs.get('zoom', False)
 
         #CDN http://cdnjs.com/libraries/nvd3/ needs to make sure it's up to date
         self.header_css = [
@@ -452,6 +455,7 @@ class NVD3Chart:
             datum = "data_%s[0].values" % self.name
         else:
             datum = "data_%s" % self.name
+        self.data_name = datum
 
         # add custom tooltip string in jschart
         # default condition (if build_custom_tooltip is not called explicitly with date_flag=True)
@@ -549,6 +553,59 @@ class NVD3Chart:
 
         if self.resize:
             self.jschart += stab(1) + "nv.utils.windowResize(chart.update);\n"
+
+        if self.zoom:
+            if self.model == 'scatterChart':
+                self.jschart += "\n"
+                self.jschart += "\nvar width = $('#compare').width();"
+                self.jschart += "\nvar height = $('#compare').height();"
+                self.jschart += "\nxmin = 99999999999;"
+                self.jschart += "\nymin = 99999999999;"
+                self.jschart += "\nymax = 0;"
+                self.jschart += "\nxmax = 0;"
+                self.jschart += "\nfor (i = 0; i < {data}.length; i++) {".replace("{data}",self.data_name)
+                self.jschart += "\n" + stab(1) + "values = {data}[i].values;".format(data=self.data_name)
+                self.jschart += "\n" + stab(1) + "for (j = 0; j < values.length; j++) {"
+                self.jschart += "\n" + stab(2) + "if (values[j].y > ymax) {"
+                self.jschart += "\n" + stab(3) + "ymax = values[j].y;"
+                self.jschart += "\n" + stab(2) + "}"
+                self.jschart += "\n" + stab(2) + "if (values[j].x > xmax) {"
+                self.jschart += "\n" + stab(3) + "xmax = values[j].x;"
+                self.jschart += "\n" + stab(2) + "}"
+                self.jschart += "\n" + stab(2) + "if (values[j].y < ymin) {"
+                self.jschart += "\n" + stab(3) + "ymin = values[j].y;"
+                self.jschart += "\n" + stab(2) + "}"
+                self.jschart += "\n" + stab(2) + "if (values[j].x < xmin) {"
+                self.jschart += "\n" + stab(3) + "xmin = values[j].x;"
+                self.jschart += "\n" + stab(2) + "}"
+                self.jschart += "\n" + stab(1) + "}"
+                self.jschart += "\n}"
+                self.jschart += "\nvar x = d3.scale.linear()"
+                self.jschart += "\n" + stab(1) + ".domain([xmin, xmax])"
+                self.jschart += "\n" + stab(1) + ".range([0, width]);"
+                self.jschart += "\nchart.xAxis.scale(x);"
+                self.jschart += "\nvar y = d3.scale.linear()"
+                self.jschart += "\n" + stab(1) + ".domain([ymin, ymax])"
+                self.jschart += "\n" + stab(1) + ".range([height, 0]);"
+                self.jschart += "\nchart.yAxis.scale(y);"
+                self.jschart += "\nfunction zoomed() {"
+                self.jschart += "\n" + stab(1) + "transform = $('#{name} svg g g .nv-scatterWrap')[0];".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "d3.select(transform).attr('transform', 'translate(' + d3.event.translate.join(',') + ') scale(' + d3.event.scale + ')');"
+                self.jschart += "\n" + stab(1) + "x_axis = $('#{name} svg g g .nv-x g')[0];".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "y_axis = $('#{name} svg g g .nv-y g')[0];".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-y g').html('');".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-x g').html('');".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "d3.select(x_axis).call(chart.xAxis);"
+                self.jschart += "\n" + stab(1) + "d3.select(y_axis).call(chart.yAxis);"
+                self.jschart += "\n}"
+                self.jschart += "\nchart.showYAxis(false);"
+                self.jschart += "\nchart.showXAxis(false);"
+                self.jschart += "\nvar zoom = d3.behavior.zoom().x(x).y(y).scaleExtent([1,8]).on('zoom', zoomed);"
+                self.jschart += "\nsvgDoc = $('#{name}')[0];".format(name=self.name)
+                self.jschart += "\nd3.select(svgDoc).call(zoom);"
+                self.jschart += "\nchart.update();"
+
+
         self.jschart += stab(1) + "return chart;\n});"
 
         if self.jquery_on_ready:
