@@ -557,37 +557,6 @@ class NVD3Chart:
         if self.zoom:
             if self.model == 'scatterChart':
                 self.jschart += "\n"
-                self.jschart += "\nvar width = $('#{name}').width();".format(name=self.name)
-                self.jschart += "\nvar height = $('#{name}').height();".format(name=self.name)
-                self.jschart += "\nxmin = 99999999999;"
-                self.jschart += "\nymin = 99999999999;"
-                self.jschart += "\nymax = 0;"
-                self.jschart += "\nxmax = 0;"
-                self.jschart += "\nfor (i = 0; i < {data}.length; i++) {".replace("{data}",self.data_name)
-                self.jschart += "\n" + stab(1) + "values = {data}[i].values;".format(data=self.data_name)
-                self.jschart += "\n" + stab(1) + "for (j = 0; j < values.length; j++) {"
-                self.jschart += "\n" + stab(2) + "if (values[j].y > ymax) {"
-                self.jschart += "\n" + stab(3) + "ymax = values[j].y;"
-                self.jschart += "\n" + stab(2) + "}"
-                self.jschart += "\n" + stab(2) + "if (values[j].x > xmax) {"
-                self.jschart += "\n" + stab(3) + "xmax = values[j].x;"
-                self.jschart += "\n" + stab(2) + "}"
-                self.jschart += "\n" + stab(2) + "if (values[j].y < ymin) {"
-                self.jschart += "\n" + stab(3) + "ymin = values[j].y;"
-                self.jschart += "\n" + stab(2) + "}"
-                self.jschart += "\n" + stab(2) + "if (values[j].x < xmin) {"
-                self.jschart += "\n" + stab(3) + "xmin = values[j].x;"
-                self.jschart += "\n" + stab(2) + "}"
-                self.jschart += "\n" + stab(1) + "}"
-                self.jschart += "\n}"
-                self.jschart += "\nvar x = d3.scale.linear()"
-                self.jschart += "\n" + stab(1) + ".domain([xmin, xmax])"
-                self.jschart += "\n" + stab(1) + ".range([0, width]);"
-                self.jschart += "\nchart.xAxis.scale(x);"
-                self.jschart += "\nvar y = d3.scale.linear()"
-                self.jschart += "\n" + stab(1) + ".domain([ymin, ymax])"
-                self.jschart += "\n" + stab(1) + ".range([height, 0]);"
-                self.jschart += "\nchart.yAxis.scale(y);"
                 self.jschart += "\nfunction zoomed() {"
                 self.jschart += "\n" + stab(1) + "transform = $('#{name} svg g g .nv-scatterWrap')[0];".format(name=self.name)
                 self.jschart += "\n" + stab(1) + "d3.select(transform).attr('transform', 'translate(' + d3.event.translate.join(',') + ') scale(' + d3.event.scale + ')');"
@@ -600,7 +569,7 @@ class NVD3Chart:
                 self.jschart += "\n}"
                 self.jschart += "\nchart.showYAxis(false);"
                 self.jschart += "\nchart.showXAxis(false);"
-                self.jschart += "\nvar zoom = d3.behavior.zoom().x(x).y(y).scaleExtent([1,8]).on('zoom', zoomed);"
+                self.jschart += "\nvar zoom = d3.behavior.zoom().y(chart.yAxis.scale()).x(chart.xAxis.scale()).scaleExtent([1,8]).on('zoom', zoomed);".format(name=self.name)
                 self.jschart += "\nsvgDoc = $('#{name}')[0];".format(name=self.name)
                 self.jschart += "\nd3.select(svgDoc).call(zoom);"
                 self.jschart += "\nchart.update();"
