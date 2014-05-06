@@ -562,24 +562,26 @@ class NVD3Chart:
                 self.jschart += "\n" + stab(1) + "d3.select(transform).attr('transform', 'translate(' + d3.event.translate.join(',') + ') scale(' + d3.event.scale + ')');"
                 self.jschart += "\n" + stab(1) + "x_axis = $('#{name} svg g g .nv-x g')[0];".format(name=self.name)
                 self.jschart += "\n" + stab(1) + "y_axis = $('#{name} svg g g .nv-y g')[0];".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "x_dist = $('#{name} svg g g .nv-distributionX g')[0];".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "y_dist = $('#{name} svg g g .nv-distributionY g')[0];".format(name=self.name)
                 self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-y g').html('');".format(name=self.name)
                 self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-x g').html('');".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-distributionX g').html('');".format(name=self.name)
+                self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-distributionY g').html('');".format(name=self.name)
                 self.jschart += "\n" + stab(1) + "d3.select(x_axis).call(chart.xAxis);"
                 self.jschart += "\n" + stab(1) + "d3.select(y_axis).call(chart.yAxis);"
+                self.jschart += "\n" + stab(1) + "d3.select(x_dist).call(chart.distX);"
+                self.jschart += "\n" + stab(1) + "d3.select(y_dist).call(chart.distY);"
                 self.jschart += "\n}"
-                self.jschart += "\nchart.showYAxis(false);"
-                self.jschart += "\nchart.showXAxis(false);"
                 self.jschart += "\nvar zoom = d3.behavior.zoom().y(chart.yAxis.scale()).x(chart.xAxis.scale()).scaleExtent([1,8]).on('zoom', zoomed);".format(name=self.name)
                 self.jschart += "\nsvgDoc = $('#{name}')[0];".format(name=self.name)
                 self.jschart += "\nd3.select(svgDoc).call(zoom);"
                 self.jschart += "\nchart.update();"
 
-
         self.jschart += stab(1) + "return chart;\n});"
 
         if self.jquery_on_ready:
             self.jschart += "\n});"
-
 
         #Include data
         series_js = json.dumps(self.series)
