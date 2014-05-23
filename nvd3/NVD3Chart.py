@@ -367,20 +367,17 @@ class NVD3Chart:
         if self.python_defined_tooltip:
             json_tooltips = json.dumps(self.python_defined_tooltip)
 
-            self.charttooltip = stab(2) + "chart.tooltipContent(function(key, y, e, graph) {\n" + \
+            self.charttooltip = """
+                if (!chart.new_tooltips) {
+                    chart.new_tooltips = %s;\n
+                }
+            """ % (json_tooltips)
+
+            self.charttooltip += stab(2) + "chart.tooltipContent(function(key, y, e, graph) {\n" + \
                 stab(3) + "var x = String(graph.point.x);\n" + \
                 stab(3) + "var y = String(graph.point.y);\n" + \
                 stab(3) + "var serie = key;\n" + \
-                stab(3) + "if (!chart.custom_tooltips) {\n" + \
-                stab(4) + "chart.custom_tooltips = " + json_tooltips + ";\n" + \
-                stab(4) + "var custom_tooltips = chart.custom_tooltips;\n" + \
-                stab(3) + "}\n" + \
-                stab(3) + "if (new_tooltips) {\n" + \
-                stab(4) + "var custom_tooltips = new_tooltips;\n" + \
-                stab(3) + "} else {\n" + \
-                stab(4) + "var custom_tooltips = chart.custom_tooltips;\n" + \
-                stab(3) + "}\n" + \
-                stab(3) + "var tooltip_list = custom_tooltips[serie];\n" + \
+                stab(3) + "var tooltip_list = chart.new_tooltips[serie];\n" + \
                 self.tooltip_condition_string + \
                 stab(3) + "tooltip_str = '<center><b>'+ tooltip_list[graph.pointIndex]+'</b></center>';\n" + \
                 stab(3) + "return tooltip_str;\n" + \
@@ -418,7 +415,10 @@ class NVD3Chart:
     def get_zoom(self):
         res = ''
         res += "\n"
-        res += "\n" + stab(1) + "var transform = $('#{name} svg g g .nv-scatterWrap')[0];".format(name=self.name)
+        if self.model == 'multiBarChart':
+            res += "\n" + stab(1) + "var transform = $('#{name} svg g g .nv-barsWrap')[0];".format(name=self.name)
+        elif self.model == 'scatterChart':
+            res += "\n" + stab(1) + "var transform = $('#{name} svg g g .nv-scatterWrap')[0];".format(name=self.name)
         res += "\nfunction zoomed() {"
         res += "\n" + stab(1) + "d3.select(transform).attr('transform', 'translate(' + d3.event.translate.join(',') + ') scale(' + d3.event.scale + ')');"
         res += "\n" + stab(1) + "x_axis = $('#{name} svg g g .nv-x g')[0];".format(name=self.name)
@@ -438,9 +438,9 @@ class NVD3Chart:
         res += "\nvar zoom = d3.behavior.zoom().y(chart.yAxis.scale()).x(chart.xAxis.scale()).scaleExtent([1,8]).on('zoom', zoomed);".format(name=self.name)
         res += "\nvar svgDoc = $('#{name}')[0];".format(name=self.name)
         res += "\nsvg = $('#{name} svg')[0];".format(name=self.name)
-        #res += "\nd3.select(svgDoc).call(zoom);"
 
         res += "\nvar g = $('#{name} g')[0];".format(name=self.name)
+        res += "\nvar g_data = $('#{name} g g g')[0];".format(name=self.name)
         res += """\nd3.select(svgDoc).on('mousedown', function() {
 
             var e = this,
@@ -450,7 +450,7 @@ class NVD3Chart:
             origin[0] = origin[0] - chart.margin().left;
             origin[1] = origin[1] - chart.margin().top;
 
-            d3.select(svgDoc).classed("noselect", true);
+            //d3.select(svgDoc).classed("noselect", true);
             d3.select(svgDoc)
                 .on("mousemove.zoomRect", function() {
                     var m = d3.mouse(e);
@@ -471,56 +471,85 @@ class NVD3Chart:
                         var x = chart.xAxis.scale();
                         var y = chart.yAxis.scale();
 
+                        new_data = jQuery.extend(true, [], chart.new_data);
+                        if (chart.new_redirect_links) {
+                            new_redirect_links = {}
+                        } else {
+                            new_redirect_links = null;
+                        }
+                        if (chart.new_tooltips) {
+                            var new_tooltips = jQuery.extend(true, {}, chart.new_tooltips);
+                        } else {
+                            var new_tooltips = null;
+                        }
+        """
+
+        if self.model == 'multiBarChart':
+            res += """
+                        var w = g_data.getBoundingClientRect().width;
+                        var h = g_data.getBoundingClientRect().height;
+                        var l = chart.new_data[0].values.length;
+                        var d = w/l; //distance between elements in the x axis
+                        var o_fi = origin[0] / d;
+                        var o_index = Math.max(0, Math.floor(o_fi));
+                        var o_index = Math.min(o_index, l-1);
+
+                        var m_fi = m[0] / d;
+                        var m_index = Math.max(0, Math.floor(m_fi));
+                        var m_index = Math.min(m_index, l-1);
+                        var xmax = Math.max(o_index, m_index);
+                        var xmin = Math.min(o_index, m_index);
+                        for (var i = 0; i < chart.new_data.length; i++) {
+                            new_data[i].values = chart.new_data[i].values.slice(xmin, xmax);
+                            if (chart.new_redirect_links) {
+                                new_redirect_links[chart.new_data[i].key] = chart.new_redirect_links[chart.new_data[i].key].slice(xmin, xmax);
+                            }
+                            if (chart.new_tooltips) {
+                                new_tooltips[chart.new_data[i].key] = chart.new_tooltips[chart.new_data[i].key].slice(xmin, xmax);
+                            }
+                        }
+            """
+        elif self.model == 'scatterChart':
+            res += """
                         xmap = [origin[0], m[0]].map(x.invert);
                         xmin = Math.min(xmap[0], xmap[1]);
                         xmax = Math.max(xmap[0], xmap[1]);
                         ymap = [origin[1], m[1]].map(y.invert);
                         ymin = Math.min(ymap[0], ymap[1]);
                         ymax = Math.max(ymap[0], ymap[1]);
-                        var new_data = jQuery.extend(true, [], %s);
-                        if (chart.redirect_links) {
-                            new_redirect_links = {}
-                        } else {
-                            new_redirect_links = null;
-                        }
-                        if (chart.custom_tooltips) {
-                            var new_tooltips = jQuery.extend(true, {}, chart.custom_tooltips);
-                        } else {
-                            var new_tooltips = null;
-                        }
 
-                        var data = %s;
-                        for (var i = 0; i < data.length; i++) {
+                        for (var i = 0; i < chart.new_data.length; i++) {
                             new_data[i].values = [];
-                            if (chart.redirect_links) {
+                            if (chart.new_redirect_links) {
                                 new_redirect_links[i] = [];
                             }
-                            if (chart.custom_tooltips) {
-                                new_tooltips[%s[i].key] = [];
+                            if (chart.new_tooltips) {
+                                new_tooltips[chart.new_data[i].key] = [];
                             }
 
-                            for (var j = 0; j < %s[i].values.length; j++) {
-                                val = %s[i].values[j];
+                            for (var j = 0; j < chart.new_data[i].values.length; j++) {
+                                val = chart.new_data[i].values[j];
                                 if (val.x >= xmin && val.x <= xmax && val.y >= ymin && val.y <= ymax) {
                                     new_data[i].values.push(val);
-                                    if (chart.redirect_links) {
-                                        new_redirect_links[i].push(chart.redirect_links[i][j]);
+                                    if (chart.new_redirect_links) {
+                                        new_redirect_links[i].push(chart.new_redirect_links[i][j]);
                                     }
-                                    if (chart.custom_tooltips) {
-                                        var tp = chart.custom_tooltips[%s[i].key][j];
-                                        new_tooltips[%s[i].key].push(tp);
+                                    if (chart.new_tooltips) {
+                                        var tp = chart.new_tooltips[chart.new_data[i].key][j];
+                                        new_tooltips[chart.new_data[i].key].push(tp);
                                     }
                                 }
                             }
                         }
+            """
+        res += """
                         rect.remove();
                         $('#%s svg').html('');
                         redraw_%s(new_data, new_redirect_links, new_tooltips);
                     }
-                })
-            ;
-        });
-        """ % (self.data_name, self.data_name, self.data_name, self.data_name, self.data_name, self.data_name, self.data_name, self.name, self.name)
+                });
+            });
+            """ % (self.name, self.name)
         res += "\n"
 
         res += "\nchart.update();"
@@ -550,15 +579,21 @@ class NVD3Chart:
             self.jschart += """data_%s=%s;\n""" % (self.name, series_js)
 
         if self.zoom:
-            self.jschart += 'function redraw_%s(data, new_redirect_links, new_tooltips) {\n' % self.name 
+            self.jschart += 'function redraw_%s(new_data, new_redirect_links, new_tooltips) {\n' % self.name
             self.jschart += stab(1) + 'var chart;\n'
         else:
             self.jschart += stab(1) + 'new_redirect_links = null;\n'
             self.jschart += stab(1) + 'new_tooltips = null;\n'
+            self.jschart += stab(1) + 'new_data = null;\n'
 
         self.jschart += 'nv.addGraph(function() {\n'
-
         self.jschart += stab(2) + 'var chart = nv.models.%s();\n' % self.model
+
+        if self.zoom:
+            self.jschart += stab(2) + 'chart.new_data = new_data;'
+            #if self.redirect_links
+            self.jschart += stab(2) + 'chart.new_redirect_links = new_redirect_links;'
+            self.jschart += stab(2) + 'chart.new_tooltips = new_tooltips;'
 
         if self.model != 'pieChart' and not self.color_list:
             if self.color_category:
@@ -640,7 +675,7 @@ class NVD3Chart:
         #Inject data to D3
         self.jschart += stab(2) + "d3.select('#%s svg')\n" % self.name
         if self.zoom:
-            self.jschart += stab(3) + ".datum(data)\n"
+            self.jschart += stab(3) + ".datum(new_data)\n"
         else:
             self.jschart += stab(3) + ".datum(%s)\n" % datum
         self.jschart += stab(3) + ".transition().duration(500)\n" + \
@@ -648,9 +683,9 @@ class NVD3Chart:
         stab(3) + ".call(chart);\n\n"
 
         if self.redirect_links:
-            self.jschart += 'if ( !chart.redirect_links ) {\n'
-            self.jschart += 'chart.redirect_links = ' + json.dumps(self.redirect_links) + ';\n'
-            self.jschart += 'var redirect_links = chart.redirect_links;\n'
+            self.jschart += 'if ( !chart.new_redirect_links ) {\n'
+            self.jschart += 'chart.new_redirect_links = ' + json.dumps(self.redirect_links) + ';\n'
+            self.jschart += 'var redirect_links = chart.new_redirect_links;\n'
             self.jschart += '}\n'
             self.jschart += 'if ( new_redirect_links ) {\n'
             self.jschart += ' var redirect_links = new_redirect_links;\n'
@@ -701,7 +736,7 @@ class NVD3Chart:
             self.jschart += stab(1) + "nv.utils.windowResize(chart.update);\n"
 
         if self.zoom:
-            if self.model == 'scatterChart':
+            if self.model in ('scatterChart', 'multiBarChart'):
                 self.jschart += self.get_zoom()
 
         self.jschart += stab(1) + "return chart;\n});"
@@ -709,7 +744,6 @@ class NVD3Chart:
         if self.jquery_on_ready:
             self.jschart += "\n});"
 
-        
         if self.zoom:
             self.jschart += '\n}'
             self.jschart += '\nredraw_{name}({datum});'.format(name=self.name, datum=self.data_name)
