@@ -371,8 +371,16 @@ class NVD3Chart:
                 stab(3) + "var x = String(graph.point.x);\n" + \
                 stab(3) + "var y = String(graph.point.y);\n" + \
                 stab(3) + "var serie = key;\n" + \
-                stab(3) + "var tooltips = " + json_tooltips + ";\n" + \
-                stab(3) + "var tooltip_list = tooltips[serie];\n" + \
+                stab(3) + "if (!chart.custom_tooltips) {\n" + \
+                stab(4) + "chart.custom_tooltips = " + json_tooltips + ";\n" + \
+                stab(4) + "var custom_tooltips = chart.custom_tooltips;\n" + \
+                stab(3) + "}\n" + \
+                stab(3) + "if (new_tooltips) {\n" + \
+                stab(4) + "var custom_tooltips = new_tooltips;\n" + \
+                stab(3) + "} else {\n" + \
+                stab(4) + "var custom_tooltips = chart.custom_tooltips;\n" + \
+                stab(3) + "}\n" + \
+                stab(3) + "var tooltip_list = custom_tooltips[serie];\n" + \
                 self.tooltip_condition_string + \
                 stab(3) + "tooltip_str = '<center><b>'+ tooltip_list[graph.pointIndex]+'</b></center>';\n" + \
                 stab(3) + "return tooltip_str;\n" + \
@@ -407,6 +415,117 @@ class NVD3Chart:
                     stab(3) + "return tooltip_str;\n" + \
                     stab(2) + "});\n"
 
+    def get_zoom(self):
+        res = ''
+        res += "\n"
+        res += "\n" + stab(1) + "var transform = $('#{name} svg g g .nv-scatterWrap')[0];".format(name=self.name)
+        res += "\nfunction zoomed() {"
+        res += "\n" + stab(1) + "d3.select(transform).attr('transform', 'translate(' + d3.event.translate.join(',') + ') scale(' + d3.event.scale + ')');"
+        res += "\n" + stab(1) + "x_axis = $('#{name} svg g g .nv-x g')[0];".format(name=self.name)
+        res += "\n" + stab(1) + "y_axis = $('#{name} svg g g .nv-y g')[0];".format(name=self.name)
+        res += "\n" + stab(1) + "x_dist = $('#{name} svg g g .nv-distributionX g')[0];".format(name=self.name)
+        res += "\n" + stab(1) + "y_dist = $('#{name} svg g g .nv-distributionY g')[0];".format(name=self.name)
+        res += "\n" + stab(1) + "$('#{name} svg g g .nv-y g').html('');".format(name=self.name)
+        res += "\n" + stab(1) + "$('#{name} svg g g .nv-x g').html('');".format(name=self.name)
+        res += "\n" + stab(1) + "$('#{name} svg g g .nv-distributionX g').html('');".format(name=self.name)
+        res += "\n" + stab(1) + "$('#{name} svg g g .nv-distributionY g').html('');".format(name=self.name)
+        res += "\n" + stab(1) + "d3.select(x_axis).call(chart.xAxis);"
+        res += "\n" + stab(1) + "d3.select(y_axis).call(chart.yAxis);"
+        res += "\n" + stab(1) + "d3.select(x_dist).call(chart.distX);"
+        res += "\n" + stab(1) + "d3.select(y_dist).call(chart.distY);"
+
+        res += "\n}"
+        res += "\nvar zoom = d3.behavior.zoom().y(chart.yAxis.scale()).x(chart.xAxis.scale()).scaleExtent([1,8]).on('zoom', zoomed);".format(name=self.name)
+        res += "\nvar svgDoc = $('#{name}')[0];".format(name=self.name)
+        res += "\nsvg = $('#{name} svg')[0];".format(name=self.name)
+        #res += "\nd3.select(svgDoc).call(zoom);"
+
+        res += "\nvar g = $('#{name} g')[0];".format(name=self.name)
+        res += """\nd3.select(svgDoc).on('mousedown', function() {
+
+            var e = this,
+                origin = d3.mouse(e),
+                rect = d3.select(transform).append("rect").attr("class", "zoom");
+
+            origin[0] = origin[0] - chart.margin().left;
+            origin[1] = origin[1] - chart.margin().top;
+
+            d3.select(svgDoc).classed("noselect", true);
+            d3.select(svgDoc)
+                .on("mousemove.zoomRect", function() {
+                    var m = d3.mouse(e);
+                    m[0] = m[0] - chart.margin().left;
+                    m[1] = m[1] - chart.margin().top;
+                    rect.attr("x", Math.min(origin[0], m[0]))
+                        .attr("y", Math.min(origin[1], m[1]))
+                        .attr("width", Math.abs(m[0] - origin[0]))
+                        .attr("height", Math.abs(m[1] - origin[1]));
+                })
+                .on("mouseup.zoomRect", function() {
+                    d3.select(svgDoc).on("mousemove.zoomRect", null).on("mouseup.zoomRect", null);
+                    d3.select("body").classed("noselect", false);
+                    var m = d3.mouse(e);
+                    m[0] = m[0] - chart.margin().left;
+                    m[1] = m[1] - chart.margin().top;
+                    if (m[0] !== origin[0] && m[1] !== origin[1]) {
+                        var x = chart.xAxis.scale();
+                        var y = chart.yAxis.scale();
+
+                        xmap = [origin[0], m[0]].map(x.invert);
+                        xmin = Math.min(xmap[0], xmap[1]);
+                        xmax = Math.max(xmap[0], xmap[1]);
+                        ymap = [origin[1], m[1]].map(y.invert);
+                        ymin = Math.min(ymap[0], ymap[1]);
+                        ymax = Math.max(ymap[0], ymap[1]);
+                        var new_data = jQuery.extend(true, [], %s);
+                        if (chart.redirect_links) {
+                            new_redirect_links = {}
+                        } else {
+                            new_redirect_links = null;
+                        }
+                        if (chart.custom_tooltips) {
+                            var new_tooltips = jQuery.extend(true, {}, chart.custom_tooltips);
+                        } else {
+                            var new_tooltips = null;
+                        }
+
+                        var data = %s;
+                        for (var i = 0; i < data.length; i++) {
+                            new_data[i].values = [];
+                            if (chart.redirect_links) {
+                                new_redirect_links[i] = [];
+                            }
+                            if (chart.custom_tooltips) {
+                                new_tooltips[%s[i].key] = [];
+                            }
+
+                            for (var j = 0; j < %s[i].values.length; j++) {
+                                val = %s[i].values[j];
+                                if (val.x >= xmin && val.x <= xmax && val.y >= ymin && val.y <= ymax) {
+                                    new_data[i].values.push(val);
+                                    if (chart.redirect_links) {
+                                        new_redirect_links[i].push(chart.redirect_links[i][j]);
+                                    }
+                                    if (chart.custom_tooltips) {
+                                        var tp = chart.custom_tooltips[%s[i].key][j];
+                                        new_tooltips[%s[i].key].push(tp);
+                                    }
+                                }
+                            }
+                        }
+                        rect.remove();
+                        $('#%s svg').html('');
+                        redraw_%s(new_data, new_redirect_links, new_tooltips);
+                    }
+                })
+            ;
+        });
+        """ % (self.data_name, self.data_name, self.data_name, self.data_name, self.data_name, self.data_name, self.data_name, self.name, self.name)
+        res += "\n"
+
+        res += "\nchart.update();"
+        return res
+
     def buildjschart(self):
         """generate javascript code for the chart"""
 
@@ -418,6 +537,24 @@ class NVD3Chart:
 
         if self.jquery_on_ready:
             self.jschart += '$(function(){'
+
+        #Include data
+        series_js = json.dumps(self.series)
+
+        if self.model == 'linePlusBarWithFocusChart':
+            append_to_data = ".map(function(series) {" + \
+                "series.values = series.values.map(function(d) { return {x: d[0], y: d[1] } });" + \
+                "return series; })"
+            self.jschart += """data_%s=%s%s;\n""" % (self.name, series_js, append_to_data)
+        else:
+            self.jschart += """data_%s=%s;\n""" % (self.name, series_js)
+
+        if self.zoom:
+            self.jschart += 'function redraw_%s(data, new_redirect_links, new_tooltips) {\n' % self.name 
+            self.jschart += stab(1) + 'var chart;\n'
+        else:
+            self.jschart += stab(1) + 'new_redirect_links = null;\n'
+            self.jschart += stab(1) + 'new_tooltips = null;\n'
 
         self.jschart += 'nv.addGraph(function() {\n'
 
@@ -501,14 +638,23 @@ class NVD3Chart:
             self.jschart += "\n"
 
         #Inject data to D3
-        self.jschart += stab(2) + "d3.select('#%s svg')\n" % self.name + \
-            stab(3) + ".datum(%s)\n" % datum + \
-            stab(3) + ".transition().duration(500)\n" + \
-            stab(3) + self.d3_select_extra + \
-            stab(3) + ".call(chart);\n\n"
+        self.jschart += stab(2) + "d3.select('#%s svg')\n" % self.name
+        if self.zoom:
+            self.jschart += stab(3) + ".datum(data)\n"
+        else:
+            self.jschart += stab(3) + ".datum(%s)\n" % datum
+        self.jschart += stab(3) + ".transition().duration(500)\n" + \
+        stab(3) + self.d3_select_extra + \
+        stab(3) + ".call(chart);\n\n"
 
         if self.redirect_links:
-            self.jschart += 'var redirect_links = ' + json.dumps(self.redirect_links) + ';\n'
+            self.jschart += 'if ( !chart.redirect_links ) {\n'
+            self.jschart += 'chart.redirect_links = ' + json.dumps(self.redirect_links) + ';\n'
+            self.jschart += 'var redirect_links = chart.redirect_links;\n'
+            self.jschart += '}\n'
+            self.jschart += 'if ( new_redirect_links ) {\n'
+            self.jschart += ' var redirect_links = new_redirect_links;\n'
+            self.jschart += '}\n'
             if self.model == 'multiBarChart': 
                 self.jschart += """chart.multibar.dispatch.on("elementClick", function(e) {
                     var serie = e.series.key;
@@ -556,43 +702,17 @@ class NVD3Chart:
 
         if self.zoom:
             if self.model == 'scatterChart':
-                self.jschart += "\n"
-                self.jschart += "\nfunction zoomed() {"
-                self.jschart += "\n" + stab(1) + "transform = $('#{name} svg g g .nv-scatterWrap')[0];".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "d3.select(transform).attr('transform', 'translate(' + d3.event.translate.join(',') + ') scale(' + d3.event.scale + ')');"
-                self.jschart += "\n" + stab(1) + "x_axis = $('#{name} svg g g .nv-x g')[0];".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "y_axis = $('#{name} svg g g .nv-y g')[0];".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "x_dist = $('#{name} svg g g .nv-distributionX g')[0];".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "y_dist = $('#{name} svg g g .nv-distributionY g')[0];".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-y g').html('');".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-x g').html('');".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-distributionX g').html('');".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "$('#{name} svg g g .nv-distributionY g').html('');".format(name=self.name)
-                self.jschart += "\n" + stab(1) + "d3.select(x_axis).call(chart.xAxis);"
-                self.jschart += "\n" + stab(1) + "d3.select(y_axis).call(chart.yAxis);"
-                self.jschart += "\n" + stab(1) + "d3.select(x_dist).call(chart.distX);"
-                self.jschart += "\n" + stab(1) + "d3.select(y_dist).call(chart.distY);"
-                self.jschart += "\n}"
-                self.jschart += "\nvar zoom = d3.behavior.zoom().y(chart.yAxis.scale()).x(chart.xAxis.scale()).scaleExtent([1,8]).on('zoom', zoomed);".format(name=self.name)
-                self.jschart += "\nsvgDoc = $('#{name}')[0];".format(name=self.name)
-                self.jschart += "\nd3.select(svgDoc).call(zoom);"
-                self.jschart += "\nchart.update();"
+                self.jschart += self.get_zoom()
 
         self.jschart += stab(1) + "return chart;\n});"
 
         if self.jquery_on_ready:
             self.jschart += "\n});"
 
-        #Include data
-        series_js = json.dumps(self.series)
-
-        if self.model == 'linePlusBarWithFocusChart':
-            append_to_data = ".map(function(series) {" + \
-                "series.values = series.values.map(function(d) { return {x: d[0], y: d[1] } });" + \
-                "return series; })"
-            self.jschart += """data_%s=%s%s;\n""" % (self.name, series_js, append_to_data)
-        else:
-            self.jschart += """data_%s=%s;\n""" % (self.name, series_js)
+        
+        if self.zoom:
+            self.jschart += '\n}'
+            self.jschart += '\nredraw_{name}({datum});'.format(name=self.name, datum=self.data_name)
 
         if self.tag_script_js:
             self.jschart += "</script>"
