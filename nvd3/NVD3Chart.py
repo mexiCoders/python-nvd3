@@ -80,7 +80,7 @@ class NVD3Chart:
         * ``redirect_links`` List with the links that are going to be called when clicking some chart point
         * ``python_defined_tooltip`` Dictionary with lists of tooltips that are going to be displayed. Each list is a serie
         * ``margin`` - Dictionary that containts chart margin
-        * ``zoom`` - Allow to zoom in (scatterChart)
+        * ``zoom`` - Allow to zoom in (scatterChart, multibarChart, lineChart, stackedAreaChart)
     """
     count = 0
     dateformat = '%x'
@@ -419,6 +419,10 @@ class NVD3Chart:
             res += "\n" + stab(1) + "var transform = $('#{name} svg g g .nv-barsWrap')[0];".format(name=self.name)
         elif self.model == 'scatterChart':
             res += "\n" + stab(1) + "var transform = $('#{name} svg g g .nv-scatterWrap')[0];".format(name=self.name)
+        elif self.model == 'lineChart':
+            res += "\n" + stab(1) + "var transform = $('#{name} svg g g .nv-linesWrap')[0];".format(name=self.name)
+        elif self.model == 'stackedAreaChart':
+            res += "\n" + stab(1) + "var transform = $('#{name} svg g g .nv-stackedWrap')[0];".format(name=self.name)
         res += "\nfunction zoomed() {"
         res += "\n" + stab(1) + "d3.select(transform).attr('transform', 'translate(' + d3.event.translate.join(',') + ') scale(' + d3.event.scale + ')');"
         res += "\n" + stab(1) + "x_axis = $('#{name} svg g g .nv-x g')[0];".format(name=self.name)
@@ -509,7 +513,7 @@ class NVD3Chart:
                             }
                         }
             """
-        elif self.model == 'scatterChart':
+        elif self.model in ('scatterChart', 'lineChart', 'stackedAreaChart'):
             res += """
                         xmap = [origin[0], m[0]].map(x.invert);
                         xmin = Math.min(xmap[0], xmap[1]);
@@ -736,7 +740,7 @@ class NVD3Chart:
             self.jschart += stab(1) + "nv.utils.windowResize(chart.update);\n"
 
         if self.zoom:
-            if self.model in ('scatterChart', 'multiBarChart'):
+            if self.model in ('scatterChart', 'multiBarChart', 'lineChart', 'stackedAreaChart'):
                 self.jschart += self.get_zoom()
 
         self.jschart += stab(1) + "return chart;\n});"
